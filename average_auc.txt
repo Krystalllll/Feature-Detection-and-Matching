@@ -1,0 +1,11 @@
+leuven:
+average error: 208.013040 pixels
+average AUC: 0.682477
+
+bikes:
+average error: 372.497841 pixels
+average AUC: 0.617143
+
+wall:
+average error: 313.916104 pixels
+average AUC: 0.625170
