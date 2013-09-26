@@ -575,7 +575,8 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 		// 3) Fill in descriptor data
 		for (int i = 0; i < 8; i++)
 			for (int j = 0; j < 8; j++)
-				f.data.push_back((destImage.Pixel(i, j, 0) - mean) / sdev);
+			// push_back will keep the initial values
+			f.data[8 * i + j] = (destImage.Pixel(j, i, 0) - mean) / sdev;
 		image = imageCopy;
     }
 	printf("ComputeMOPSDescriptors Done!\n");
