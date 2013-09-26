@@ -127,10 +127,12 @@ void dummyComputeFeatures(CFloatImage &image, FeatureSet &features) {
 // scale invariance of the feature detection)
 void ComputeHarrisFeaturesScale(CFloatImage &image, FeatureSet &features)
 {
-	// Feature set for the 3 scale levels
+	// Feature set for the 5 scale levels
 	FeatureSet features1;
 	FeatureSet features2;
 	FeatureSet features3;
+	FeatureSet features4;
+	FeatureSet features5;
 	
 	int w = image.Shape().width;
 	int h = image.Shape().height;
@@ -138,26 +140,39 @@ void ComputeHarrisFeaturesScale(CFloatImage &image, FeatureSet &features)
 	CFloatImage oriFiltered(w, h, 3);
 	CFloatImage halfFiltered(w/2, h/2, 3);
 	CFloatImage scale_half(w/2, h/2, 3);
+	CFloatImage scale_onethird(w/3, h/3, 3);
 	CFloatImage scale_onefourth(w/4, h/4, 3);
+	CFloatImage scale_onefifth(w/5, h/5, 3);
 
 	CFloatImage LPFilter(5, 5, 1);
 	for (int i = 0; i < 5; i++)
 		for (int j = 0; j < 5; j++)
 			LPFilter.Pixel(i, j, 1) = gaussian5x5[5 * j + i];
-	// Downsample
+	// Downsaple to 1/2
 	Convolve(image, oriFiltered, LPFilter);
 	for (int i = 0; i < scale_half.Shape().width; i++)
 		for (int j = 0; j < scale_half.Shape().height; j++)
 			scale_half.Pixel(i, j, 1) = oriFiltered.Pixel(i * 2, j * 2, 1);
-	// Downsample
+	// Downsample to 1/3
+	for (int i = 0; i < scale_onethird.Shape().width; i++)
+		for (int j = 0; j < scale_onethird.Shape().height; j++)
+			scale_onethird.Pixel(i, j, 1) = oriFiltered.Pixel(i * 3, j * 3, 1);
+	// Downsample to 1/4
 	Convolve(scale_half, halfFiltered, LPFilter);
 	for (int i = 0; i < scale_onefourth.Shape().width; i++)
 		for (int j = 0; j < scale_onefourth.Shape().height; j++)
 			scale_onefourth.Pixel(i, j, 1) = halfFiltered.Pixel(i * 2, j * 2, 1);
+	// Downsample to 1/5
+	for (int i = 0; i < scale_onefifth.Shape().width; i++)
+		for (int j = 0; j < scale_onefifth.Shape().height; j++)
+			scale_onefifth.Pixel(i, j, 1) = halfFiltered.Pixel(i * 2.5, j * 2.5, 1);
+			
 	// Compute features for different scales
 	ComputeHarrisFeatures(image, features1);
-	ComputeHarrisFeatures(image, features2);
-	ComputeHarrisFeatures(image, features3);
+	ComputeHarrisFeatures(scale_half, features2);
+	ComputeHarrisFeatures(scale_onethird, features3);
+	ComputeHarrisFeatures(scale_onefourth, features4);
+	ComputeHarrisFeatures(scale_onefifth, features5);
 
 	// Upsample and merge the features
 	for (vector<Feature>::iterator i = features1.begin(); i != features1.end(); i++)
@@ -170,16 +185,34 @@ void ComputeHarrisFeaturesScale(CFloatImage &image, FeatureSet &features)
 		Feature &f2 = *j;
 		f2.x *= 2;
 		f2.y *= 2;
-		features.push_back(f2);
+		if (image.Shape().InBounds(f2.x, f2.y))
+			features.push_back(f2);
 	}
 	for (vector<Feature>::iterator k = features3.begin(); k != features3.end(); k++)
 	{
 		Feature &f3 = *k;
-		f3.x *= 4;
-		f3.y *= 4;
-		features.push_back(f3);
+		f3.x *= 3;
+		f3.y *= 3;
+		if (image.Shape().InBounds(f3.x, f3.y))
+			features.push_back(f3);
 	}
-	printf("Features Merged!\n");
+	for (vector<Feature>::iterator m = features4.begin(); m != features4.end(); m++)
+	{
+		Feature &f4 = *m;
+		f4.x *= 4;
+		f4.y *= 4;
+		if (image.Shape().InBounds(f4.x, f4.y))
+			features.push_back(f4);
+	}
+	for (vector<Feature>::iterator n = features5.begin(); n != features5.end(); n++)
+	{
+		Feature &f5 = *n;
+		f5.x *= 5;
+		f5.y *= 5;
+		if (image.Shape().InBounds(f5.x, f5.y))
+			features.push_back(f5);
+	}
+	//printf("Features Merged!\n");
 }
 
 void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
@@ -232,7 +265,7 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
             id++;
         }
     }
-	printf("ComputeHarrisFeatures Done!\n");
+	//printf("ComputeHarrisFeatures Done!\n");
 }
 
 
@@ -294,7 +327,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage, CFloat
 		}
 	}
 	
-printf("computeHarrisValues: Pre-filter Done!\n"); 
+	//printf("computeHarrisValues: Pre-filter Done!\n"); 
 
     double h1,h2,h3,h4;
 	double lamda;
@@ -327,7 +360,7 @@ printf("computeHarrisValues: Pre-filter Done!\n");
 			
         }
     }
-	printf("computeHarrisValues Done!\n"); 
+	//printf("computeHarrisValues Done!\n"); 
 }
 
 
@@ -381,7 +414,7 @@ void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 			}
 		}
 	}
-	printf("computeLocalMaxima Done!\n");
+	//printf("computeLocalMaxima Done!\n");
 
 	//non-maximum suppression here
 	FeatureSet tmp;
@@ -495,7 +528,7 @@ void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
 			}
 		}
     }
-	printf("ComputeSimpleDescriptors Done!\n"); 
+	//printf("ComputeSimpleDescriptors Done!\n"); 
 }
 
 // TODO: Implement parts of this function
@@ -572,14 +605,19 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 			for (int j = 0; j < 8; j++)
 				ssum += pow(destImage.Pixel(i, j, 0) - mean, 2);
 		double sdev = sqrt(ssum / 64);
+		if (sdev == 0)
+		{
+			image = imageCopy;
+			continue;
+		}
 		// 3) Fill in descriptor data
 		for (int i = 0; i < 8; i++)
 			for (int j = 0; j < 8; j++)
 			// push_back will keep the initial values
-			f.data[8 * i + j] = (destImage.Pixel(j, i, 0) - mean) / sdev;
+			f.data[8 * i + j] = (destImage.Pixel(j, i, 0) - mean) / (sdev + 1e-10);
 		image = imageCopy;
     }
-	printf("ComputeMOPSDescriptors Done!\n");
+	//printf("ComputeMOPSDescriptors Done!\n");
 }
 
 // Compute Custom descriptors (extra credit)
@@ -657,7 +695,7 @@ void ComputeCustomDescriptors(CFloatImage &image, FeatureSet &features)
 		double sdev = sqrt(ssum / 64);
 		// 3) Fill in descriptor data
 		for (int i = 0; i < 54; i++)
-			f.data[i] = (f.data[i] - mean) / sdev;
+			f.data[i] = (f.data[i] - mean) / (sdev + 1e-10);
 	}
 	printf("ComputeCustomDescriptors Done!\n");
 }
@@ -723,7 +761,7 @@ void ratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Featu
 		idBest1 = 0;
 		dBest2 = 1e100 + 1;
 		idBest2 = 0;
-
+		
 		// Find closest in the second image using ratio of SSD distance
 		for (int j = 0; j < n; j++)
 		{
