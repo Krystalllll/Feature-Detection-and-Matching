@@ -36,6 +36,9 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &destImage, CFloatIm
 //  Compute local maximum of Harris values in an image.
 void computeLocalMaxima(CFloatImage &srcImage, CByteImage &destImage);
 
+// Compute features of 3 level scaled images.
+void ComputeHarrisFeaturesScale(CFloatImage &image, FeatureSet &features);
+
 // Compute features of an image.
 bool computeFeatures(CFloatImage &image, FeatureSet &features, int featureType, int descriptorType);
 

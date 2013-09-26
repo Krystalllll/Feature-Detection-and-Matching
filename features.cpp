@@ -20,7 +20,7 @@ bool computeFeatures(CFloatImage &image, FeatureSet &features, int featureType, 
         dummyComputeFeatures(image, features);
         break;
     case 2:
-        ComputeHarrisFeatures(image, features);
+        ComputeHarrisFeaturesScale(image, features);
         break;
     default:
         return false;
@@ -123,6 +123,65 @@ void dummyComputeFeatures(CFloatImage &image, FeatureSet &features) {
     }
 }
 
+// Compute features for 3 level scaled images (Implemented to apply
+// scale invariance of the feature detection)
+void ComputeHarrisFeaturesScale(CFloatImage &image, FeatureSet &features)
+{
+	// Feature set for the 3 scale levels
+	FeatureSet features1;
+	FeatureSet features2;
+	FeatureSet features3;
+	
+	int w = image.Shape().width;
+	int h = image.Shape().height;
+
+	CFloatImage oriFiltered(w, h, 3);
+	CFloatImage halfFiltered(w/2, h/2, 3);
+	CFloatImage scale_half(w/2, h/2, 3);
+	CFloatImage scale_onefourth(w/4, h/4, 3);
+
+	CFloatImage LPFilter(5, 5, 1);
+	for (int i = 0; i < 5; i++)
+		for (int j = 0; j < 5; j++)
+			LPFilter.Pixel(i, j, 1) = gaussian5x5[5 * j + i];
+	// Downsample
+	Convolve(image, oriFiltered, LPFilter);
+	for (int i = 0; i < scale_half.Shape().width; i++)
+		for (int j = 0; j < scale_half.Shape().height; j++)
+			scale_half.Pixel(i, j, 1) = oriFiltered.Pixel(i * 2, j * 2, 1);
+	// Downsample
+	Convolve(scale_half, halfFiltered, LPFilter);
+	for (int i = 0; i < scale_onefourth.Shape().width; i++)
+		for (int j = 0; j < scale_onefourth.Shape().height; j++)
+			scale_onefourth.Pixel(i, j, 1) = halfFiltered.Pixel(i * 2, j * 2, 1);
+	// Compute features for different scales
+	ComputeHarrisFeatures(image, features1);
+	ComputeHarrisFeatures(image, features2);
+	ComputeHarrisFeatures(image, features3);
+
+	// Upsample and merge the features
+	for (vector<Feature>::iterator i = features1.begin(); i != features1.end(); i++)
+	{
+		Feature &f1 = *i;
+		features.push_back(f1);
+	}
+	for (vector<Feature>::iterator j = features2.begin(); j != features2.end(); j++)
+	{
+		Feature &f2 = *j;
+		f2.x *= 2;
+		f2.y *= 2;
+		features.push_back(f2);
+	}
+	for (vector<Feature>::iterator k = features3.begin(); k != features3.end(); k++)
+	{
+		Feature &f3 = *k;
+		f3.x *= 4;
+		f3.y *= 4;
+		features.push_back(f3);
+	}
+	printf("Features Merged!\n");
+}
+
 void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
 {
     //Create grayscale image used for Harris detection
@@ -139,6 +198,7 @@ void ComputeHarrisFeatures(CFloatImage &image, FeatureSet &features)
     // computeHarrisValues() computes the harris score at each pixel position, storing the
     // result in in harrisImage. 
     // You'll need to implement this function.
+
     computeHarrisValues(grayImage, harrisImage, orientationImage);
 
     // Threshold the harris image and compute local maxima.  You'll need to implement this function.
@@ -190,6 +250,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage, CFloat
 	CFloatImage deltax(w,h,1);
 	CFloatImage deltay(w,h,1);
 	CFloatImage mask(5,5,1);
+	
 	//compute derivative images
 	for (int y=0;y<h;y++)
 	{
@@ -208,6 +269,7 @@ void computeHarrisValues(CFloatImage &srcImage, CFloatImage &harrisImage, CFloat
 			}
 		}
 	}
+
 	//compute the mask, using sigma=1
 	double sumofmask;
 	double distance;
