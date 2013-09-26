@@ -797,11 +797,12 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 {
 	int m = f1.size();
 	int n = f2.size();
+	int k = f1[0].data.size();
 	double weight = 0.8;
 
 	matches.resize(m);
 
-	double d;
+	/*double d;
 	double dBest1, dBest2, dBest3;
 	int idBest1, idBest2, idBest3;
 	for (int i = 0; i < m; i++)
@@ -843,6 +844,31 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 		matches[i].id2 = idBest1;
 		matches[i].distance = weight * dBest1 / dBest2 + ( 1.0 - weight) * dBest2 / dBest3;
 		//cout << "dBest: " << dBest << endl;
+	}*/
+	double **dataPts=new double*[n];
+	double *queryPt=new double[k];
+	int	*nnIdx=new int[3];
+	double *dists=new double[3];
+	ANNkd_tree*			kdTree;
+	for (int i = 0; i < n; i++)
+	{
+		for (int j = 0; j < k; j++)
+		{
+			dataPts[i]=new double[64];
+			dataPts[i][j]=f2[i].data[j];
+		}
+	}
+	kdTree = new ANNkd_tree(dataPts,n,k);
+	for (int i = 0; i < m; i++)
+	{
+		for (int j = 0; j < k; j++)
+		{
+			queryPt[j]=f1[i].data[j];
+		}
+		kdTree->annkSearch(queryPt,3,nnIdx,dists,0);
+		matches[i].id1 = f1[i].id;
+		matches[i].id2 = nnIdx[0];
+		matches[i].distance = weight * dists[0] / dists[1] + ( 1.0 - weight) * dists[1] / dists[2];
 	}
 }
 

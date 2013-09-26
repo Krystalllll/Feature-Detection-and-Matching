@@ -3,6 +3,7 @@
 
 #include "ImageLib/ImageLib.h"
 #include "ImageDatabase.h"
+#include <ANN/ANN.h>
 
 class Fl_Image;
 
