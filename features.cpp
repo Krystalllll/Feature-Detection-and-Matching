@@ -802,10 +802,10 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 
 	matches.resize(m);
 
-	/*double d;
+	double d;
 	double dBest1, dBest2, dBest3;
 	int idBest1, idBest2, idBest3;
-	for (int i = 0; i < m; i++)
+	/*for (int i = 0; i < m; i++)
 	{
 		dBest1 = 1e100;
 		dBest2 = 1e100 + 1;
@@ -843,13 +843,13 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 		matches[i].id1 = f1[i].id;
 		matches[i].id2 = idBest1;
 		matches[i].distance = weight * dBest1 / dBest2 + ( 1.0 - weight) * dBest2 / dBest3;
-		//cout << "dBest: " << dBest << endl;
+		cout << idBest1 << endl;
 	}*/
 	double **dataPts=new double*[n];
 	double *queryPt=new double[k];
-	int	*nnIdx=new int[3];
-	double *dists=new double[3];
-	ANNkd_tree*			kdTree;
+	int	*nnIdx=new int[5];
+	double *dists=new double[5];
+	ANNkd_tree*	kdTree;
 	for (int i = 0; i < n; i++)
 	{
 		for (int j = 0; j < k; j++)
@@ -865,11 +865,48 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 		{
 			queryPt[j]=f1[i].data[j];
 		}
-		kdTree->annkSearch(queryPt,3,nnIdx,dists,0);
+		kdTree->annkSearch(queryPt,5,nnIdx,dists,0);
+		cout<<i<<' '<<nnIdx[0]<<' '<<nnIdx[1]<<' '<<nnIdx[2]<<' '<<nnIdx[3]<<' '<<nnIdx[4]<<endl;
+		dBest1 = 1e100;
+		dBest2 = 1e100 + 1;
+		dBest3 = 1e100 + 2;
+		idBest1 = 0;
+		idBest2 = 0;
+		idBest3 = 0;
+		for (int t = 0; t < 5; t++)
+		{
+			d = distanceSSD(f1[i].data, f2[nnIdx[t]].data);
+			if (d < dBest1)
+			{
+				dBest3 = dBest2;
+				dBest2 = dBest1;
+				dBest1 = d;
+				idBest3 = idBest2;
+				idBest2 = idBest1;
+				idBest1 = f2[nnIdx[t]].id;
+			}
+			else if (d >= dBest1 && d < dBest2)
+			{
+				dBest3 = dBest2;
+				dBest2 = d;
+				idBest3 = idBest2;
+				idBest2 = f2[nnIdx[t]].id;
+			}
+			else if (d >= dBest2 && d < dBest3)
+			{
+				dBest3 = d;
+				idBest3 = f2[nnIdx[t]].id;
+			}
+		}
 		matches[i].id1 = f1[i].id;
-		matches[i].id2 = nnIdx[0];
-		matches[i].distance = weight * dists[0] / dists[1] + ( 1.0 - weight) * dists[1] / dists[2];
+		matches[i].id2 = idBest1;
+		matches[i].distance = weight * dBest1 / dBest2 + ( 1.0 - weight) * dBest2 / dBest3;
+		cout<<idBest1<<endl;
+		//matches[i].id1 = f1[i].id;
+		//matches[i].id2 = nnIdx[0];
+		//matches[i].distance = weight * dists[0] / dists[1] + ( 1.0 - weight) * dists[1] / dists[2];
 	}
+	cout<<"done!"<<endl;
 }
 
 // Convert Fl_Image to CFloatImage.
