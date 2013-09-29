@@ -79,6 +79,9 @@ void ratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<Featu
 // Perform improved ratio feature matching. Designed by Yingchuan for extra credit.
 void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<FeatureMatch> &matches);
 
+// Perform improved ratio feature matching with kd-tree. Speed up the matching process.
+void kdtreeIRMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<FeatureMatch> &matches);
+
 // Convert Fl_Image to CFloatImage.
 bool convertImage(const Fl_Image *image, CFloatImage &convertedImage);
 

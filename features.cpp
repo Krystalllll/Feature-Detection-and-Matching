@@ -88,6 +88,9 @@ bool matchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<FeatureMat
 	case 3:
 		improvedratioMatchFeatures(f1, f2, matches);
 		return true;
+	case 4:
+		kdtreeIRMatchFeatures(f1, f2, matches);
+		return true;
     default:
         return false;
     }
@@ -519,7 +522,7 @@ void ComputeSimpleDescriptors(CFloatImage &image, FeatureSet &features)
 				if (((y+i-2)>=0)&&((y+i-2)<h)&&((x+j-2)>=0)&&((x+j-2)<w))
 				{
 					// Keep in the same range for all descriptors
-					f.data[j+5*i]=image.Pixel(x+j-2,y+i-2,1);
+					f.data[j+5*i] = grayImage.Pixel(x+j-2,y+i-2,0);
 				}
 				else
 				{
@@ -538,6 +541,7 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
     // This image represents the window around the feature you need to compute to store as the feature descriptor
     const int windowSize = 8;
     CFloatImage destImage(windowSize, windowSize, 1);
+	CFloatImage grayImage = ConvertToGray(image);
 
     for (vector<Feature>::iterator i = features.begin(); i != features.end(); i++) {
         Feature &f = *i;
@@ -572,22 +576,23 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 					window.Pixel(i, j, 0) = 0;
 					continue;
 				}
-				window.Pixel(i, j, 0) = image.Pixel(xPos, yPos, 1);
+				// We should use grayImage instead of 1st channel of RGB image
+				window.Pixel(i, j, 0) = grayImage.Pixel(xPos, yPos, 0);
 			}
 
 		// Scale to 1/5 size(Prefiltering)
 		// imageCopy is used to avoid prefiltering a prefiltered image
-		CFloatImage imageCopy = image;
+		CFloatImage imageCopy = grayImage;
 		CFloatImage gaussianKernel(5, 5, 1);
 		for (int i = 0; i < 5; i++)
 			for (int j = 0; j < 5; j++)
 				gaussianKernel.Pixel(i, j, 0) = gaussian5x5[5 * j + i];
-		Convolve(window, image, gaussianKernel);
+		Convolve(window, grayImage, gaussianKernel);
 		// Sample
 		xform[0][0] = 41 / 8;
 		xform[1][1] = 41 / 8;
         //Call the Warp Global function to do the mapping
-        WarpGlobal(image, destImage, xform, eWarpInterpLinear);
+        WarpGlobal(grayImage, destImage, xform, eWarpInterpLinear);
 
         f.data.resize(windowSize * windowSize);
 
@@ -615,7 +620,7 @@ void ComputeMOPSDescriptors(CFloatImage &image, FeatureSet &features)
 			for (int j = 0; j < 8; j++)
 			// push_back will keep the initial values
 			f.data[8 * i + j] = (destImage.Pixel(j, i, 0) - mean) / (sdev + 1e-10);
-		image = imageCopy;
+		grayImage = imageCopy;
     }
 	//printf("ComputeMOPSDescriptors Done!\n");
 }
@@ -625,27 +630,8 @@ void ComputeCustomDescriptors(CFloatImage &image, FeatureSet &features)
 {
 	int w = image.Shape().width;
     int h = image.Shape().height;
-	/* Scale Invariant To be Implemented
-    CFloatImage oriFiltered(w, h, 3);
-	CFloatImage halfFiltered(w/2, h/2, 1);
-	CFloatImage scale_half(w/2, h/2, 1);
-	CFloatImage scale_onefourth(w/4, h/4, 1);
-
-	CFloatImage LPFilter(5, 5, 1);
-	for (int i = 0; i < 5; i++)
-		for (int j = 0; j < 5; j++)
-			LPFilter.Pixel(i, j, 0) = gaussian5x5[5 * j + i];
-	// Downsample
-	Convolve(image, oriFiltered, LPFilter);
-	for (int i = 0; i < scale_half.Shape().width; i++)
-		for (int j = 0; j < scale_half.Shape().height; j++)
-			scale_half.Pixel(i, j, 0) = oriFiltered.Pixel(i * 2, j * 2, 1);
-	// Downsample
-	Convolve(scale_half, halfFiltered, LPFilter);
-	for (int i = 0; i < scale_onefourth.Shape().width; i++)
-		for (int j = 0; j < scale_onefourth.Shape().height; j++)
-			scale_onefourth.Pixel(i, j, 0) = halfFiltered.Pixel(i * 2, j * 2, 0);
-	*/
+	CFloatImage grayImage = ConvertToGray(image);
+	
     for (vector<Feature>::iterator i = features.begin(); i != features.end(); i++) 
 	{
         Feature &f = *i;
@@ -671,7 +657,7 @@ void ComputeCustomDescriptors(CFloatImage &image, FeatureSet &features)
 					f.data[step + 18 * (k - 1)] = 0;
 					continue;
 				}
-				f.data[step + 18 * (k - 1)] = image.Pixel(xPos, yPos, 1);
+				f.data[step + 18 * (k - 1)] = grayImage.Pixel(xPos, yPos, 0);
 				// Used for debug
 				//if (i == features.begin())
 				//{
@@ -697,7 +683,7 @@ void ComputeCustomDescriptors(CFloatImage &image, FeatureSet &features)
 		for (int i = 0; i < 54; i++)
 			f.data[i] = (f.data[i] - mean) / (sdev + 1e-10);
 	}
-	printf("ComputeCustomDescriptors Done!\n");
+	//printf("ComputeCustomDescriptors Done!\n");
 }
 
 // Perform simple feature matching.  This just uses the SSD
@@ -805,7 +791,7 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 	double d;
 	double dBest1, dBest2, dBest3;
 	int idBest1, idBest2, idBest3;
-	/*for (int i = 0; i < m; i++)
+	for (int i = 0; i < m; i++)
 	{
 		dBest1 = 1e100;
 		dBest2 = 1e100 + 1;
@@ -843,8 +829,27 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 		matches[i].id1 = f1[i].id;
 		matches[i].id2 = idBest1;
 		matches[i].distance = weight * dBest1 / dBest2 + ( 1.0 - weight) * dBest2 / dBest3;
-		cout << idBest1 << endl;
-	}*/
+	}
+}
+
+// Applied kd-tree to speed up the improved ratio matching process. For this method, in order to
+// get the top three best matches, we used kd-tree to find out the best 5 and compare the 5 matches
+// to get the top 3. As for kd-tree, we used the ANN: A Library for Approximate Nearest Neighbor
+// Searching from David M. Mount and Sunil Arya (http://www.cs.umd.edu/~mount/ANN/) and we improved
+// it to fit our framework and needs.
+void kdtreeIRMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vector<FeatureMatch> &matches)
+{
+	int m = f1.size();
+	int n = f2.size();
+	int k = f1[0].data.size();
+	double weight = 0.8;
+
+	matches.resize(m);
+
+	double d;
+	double dBest1, dBest2, dBest3;
+	int idBest1, idBest2, idBest3;
+	
 	double **dataPts=new double*[n];
 	double *queryPt=new double[k];
 	int	*nnIdx=new int[5];
@@ -866,7 +871,7 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 			queryPt[j]=f1[i].data[j];
 		}
 		kdTree->annkSearch(queryPt,5,nnIdx,dists,0);
-		cout<<i<<' '<<nnIdx[0]<<' '<<nnIdx[1]<<' '<<nnIdx[2]<<' '<<nnIdx[3]<<' '<<nnIdx[4]<<endl;
+		//cout<<i<<' '<<nnIdx[0]<<' '<<nnIdx[1]<<' '<<nnIdx[2]<<' '<<nnIdx[3]<<' '<<nnIdx[4]<<endl;
 		dBest1 = 1e100;
 		dBest2 = 1e100 + 1;
 		dBest3 = 1e100 + 2;
@@ -901,12 +906,8 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 		matches[i].id1 = f1[i].id;
 		matches[i].id2 = idBest1;
 		matches[i].distance = weight * dBest1 / dBest2 + ( 1.0 - weight) * dBest2 / dBest3;
-		cout<<idBest1<<endl;
-		//matches[i].id1 = f1[i].id;
-		//matches[i].id2 = nnIdx[0];
-		//matches[i].distance = weight * dists[0] / dists[1] + ( 1.0 - weight) * dists[1] / dists[2];
 	}
-	cout<<"done!"<<endl;
+	//cout<<"done!"<<endl;
 }
 
 // Convert Fl_Image to CFloatImage.

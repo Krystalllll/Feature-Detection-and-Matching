@@ -739,7 +739,12 @@ int main(int argc, char **argv) {
             // printf("\t%s testSIFTMatch featurefile1 featurefile2 homographyfile [matchtype]\n", argv[0]);
             printf("\t%s roc featurefile1 featurefile2 homographyfile [matchtype] rocfilename aucfilename\n", argv[0]);
             printf("\t%s rocSIFT featurefile1 featurefile2 homographyfile [matchtype] rocfilename aucfilename\n", argv[0]);
-            printf("\t%s benchmark imagedir [featuretype matchtype]\n", argv[0]);
+            printf("\t%s benchmark imagedir [featuretype descriptortype matchtype]\n", argv[0]);
+			printf("--------------------------------\n");
+			printf("Featuretype(1:Dummy 2:Harris)\n");
+			printf("Descriptortype(1:Window 2:MOPS 3:Custom)\n");
+			printf("Matchtype(1:SSD 2:Ratio 3:Improved Ratio 4:Kd-tree Improved Ratio)\n");
+			printf("Project achieved by Yingchuan Hu(yh537) and Hang Chu(hc772), Cornell University\n");
 
             return -1;
         }
