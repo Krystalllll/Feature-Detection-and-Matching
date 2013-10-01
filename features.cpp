@@ -140,38 +140,39 @@ void ComputeHarrisFeaturesScale(CFloatImage &image, FeatureSet &features)
 	int w = image.Shape().width;
 	int h = image.Shape().height;
 
-	CFloatImage oriFiltered(w, h, 3);
-	CFloatImage halfFiltered(w/2, h/2, 3);
-	CFloatImage scale_half(w/2, h/2, 3);
-	CFloatImage scale_onethird(w/3, h/3, 3);
-	CFloatImage scale_onefourth(w/4, h/4, 3);
-	CFloatImage scale_onefifth(w/5, h/5, 3);
+	CFloatImage oriFiltered(w, h, 1);
+	CFloatImage halfFiltered(w/2, h/2, 1);
+	CFloatImage scale_half(w/2, h/2, 1);
+	CFloatImage scale_onethird(w/3, h/3, 1);
+	CFloatImage scale_onefourth(w/4, h/4, 1);
+	CFloatImage scale_onefifth(w/5, h/5, 1);
+	CFloatImage grayImage = ConvertToGray(image);
 
 	CFloatImage LPFilter(5, 5, 1);
 	for (int i = 0; i < 5; i++)
 		for (int j = 0; j < 5; j++)
-			LPFilter.Pixel(i, j, 1) = gaussian5x5[5 * j + i];
+			LPFilter.Pixel(i, j, 0) = gaussian5x5[5 * j + i];
 	// Downsaple to 1/2
-	Convolve(image, oriFiltered, LPFilter);
+	Convolve(grayImage, oriFiltered, LPFilter);
 	for (int i = 0; i < scale_half.Shape().width; i++)
 		for (int j = 0; j < scale_half.Shape().height; j++)
-			scale_half.Pixel(i, j, 1) = oriFiltered.Pixel(i * 2, j * 2, 1);
+			scale_half.Pixel(i, j, 0) = oriFiltered.Pixel(i * 2, j * 2, 0);
 	// Downsample to 1/3
 	for (int i = 0; i < scale_onethird.Shape().width; i++)
 		for (int j = 0; j < scale_onethird.Shape().height; j++)
-			scale_onethird.Pixel(i, j, 1) = oriFiltered.Pixel(i * 3, j * 3, 1);
+			scale_onethird.Pixel(i, j, 0) = oriFiltered.Pixel(i * 3, j * 3, 0);
 	// Downsample to 1/4
 	Convolve(scale_half, halfFiltered, LPFilter);
 	for (int i = 0; i < scale_onefourth.Shape().width; i++)
 		for (int j = 0; j < scale_onefourth.Shape().height; j++)
-			scale_onefourth.Pixel(i, j, 1) = halfFiltered.Pixel(i * 2, j * 2, 1);
+			scale_onefourth.Pixel(i, j, 0) = halfFiltered.Pixel(i * 2, j * 2, 0);
 	// Downsample to 1/5
 	for (int i = 0; i < scale_onefifth.Shape().width; i++)
 		for (int j = 0; j < scale_onefifth.Shape().height; j++)
-			scale_onefifth.Pixel(i, j, 1) = halfFiltered.Pixel(i * 2.5, j * 2.5, 1);
+			scale_onefifth.Pixel(i, j, 0) = halfFiltered.Pixel(i * 2.5, j * 2.5, 0);
 			
 	// Compute features for different scales
-	ComputeHarrisFeatures(image, features1);
+	ComputeHarrisFeatures(grayImage, features1);
 	ComputeHarrisFeatures(scale_half, features2);
 	ComputeHarrisFeatures(scale_onethird, features3);
 	ComputeHarrisFeatures(scale_onefourth, features4);
@@ -461,6 +462,7 @@ void computeLocalMaxima(CFloatImage &srcImage,CByteImage &destImage)
 	}
 	//IMPORTANT PARAMETER HERE: number of feature points
 	int feature_num = (id < 500) ? id : 500;
+	
 	for (int y=0; y < destImage.Shape().height; y++) 
 	{
         for (int x=0; x < destImage.Shape().width; x++) 
@@ -783,7 +785,7 @@ void improvedratioMatchFeatures(const FeatureSet &f1, const FeatureSet &f2, vect
 {
 	int m = f1.size();
 	int n = f2.size();
-	int k = f1[0].data.size();
+	
 	double weight = 0.8;
 
 	matches.resize(m);
